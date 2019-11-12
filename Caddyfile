@@ -1,0 +1,11 @@
+lvh.me {
+    log stdout
+
+    tls /certs/lvh.me.crt /certs/lvh.me.key
+
+    proxy / http://numeracy:9000 {
+        transparent
+        header_upstream X-Marotagem  true
+        header_upstream Host  "lvh.me"
+    }
+}

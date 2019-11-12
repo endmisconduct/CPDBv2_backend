@@ -57,6 +57,20 @@ services:
       ELASTICSEARCH_URL: http://elasticsearch:9200
     depends_on:
       - elasticsearch
+  caddy:
+    image: "abiosoft/caddy:latest"
+    volumes:
+      - ./certs:/certs
+      - ./Caddyfile:/etc/Caddyfile
+    ports:
+      - "9000:2015"
+    depends_on:
+      - numeracy
+  numeracy:
+    build: ./docker/numeracy
+    env_file: .env
+    volumes:
+      - ./numeracy-data:/data
 
 volumes:
   pgdata:

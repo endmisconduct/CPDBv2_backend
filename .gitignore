@@ -79,3 +79,5 @@ pg-credentials.json
 
 # Sitemap file
 /sitemap.xml
+/numeracy-data/
+/certs/
