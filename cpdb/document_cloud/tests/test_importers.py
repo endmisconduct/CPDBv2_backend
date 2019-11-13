@@ -11,6 +11,8 @@ import pytz
 from mock import patch, Mock, MagicMock
 from robber import expect
 from freezegun import freeze_time
+import boto3
+from moto import mock_s3
 
 from data.constants import AttachmentSourceType
 from data.factories import AllegationFactory, AttachmentFileFactory
@@ -463,6 +465,7 @@ class DocumentCloudAttachmentImporterTestCase(TestCase):
     def test_reprocess_text_catch_login_failure(self, _):
         DocumentCloudAttachmentImporter(self.logger).reprocess_text()
 
+    @mock_s3
     @override_settings(
         S3_BUCKET_OFFICER_CONTENT='officer-content-test',
         S3_BUCKET_PDF_DIRECTORY='pdf',
@@ -470,7 +473,6 @@ class DocumentCloudAttachmentImporterTestCase(TestCase):
     )
     @patch('document_cloud.importers.DocumentCloud')
     @patch('data.models.attachment_file.aws')
-    @patch('shared.attachment_importer.aws')
     @patch('document_cloud.importers.send_cr_attachment_available_email')
     @patch('document_cloud.importers.search_all')
     @patch(
@@ -482,8 +484,10 @@ class DocumentCloudAttachmentImporterTestCase(TestCase):
         ]
     )
     def test_search_and_update_attachments_success(
-        self, _, search_all_mock, send_cr_attachment_email_mock, shared_aws_mock, data_aws_mock, document_cloud_mock
+        self, _, search_all_mock, send_cr_attachment_email_mock, data_aws_mock, document_cloud_mock,
     ):
+        s3 = boto3.resource('s3', region_name='us-east-1')
+        s3.create_bucket(Bucket='crawler_logs_bucket')
         allegation = AllegationFactory(crid='234')
         new_cloud_document = create_object({
             'documentcloud_id': '999',
@@ -941,55 +945,50 @@ class DocumentCloudAttachmentImporterTestCase(TestCase):
         expect(crawler_log.log_key).to.eq('documentcloud/documentcloud-2018-04-04-120001.txt')
         expect(crawler_log.error_key).to.eq('documentcloud/error-traceback-log-documentcloud-2018-04-04-120001.txt')
 
-        log_args = shared_aws_mock.s3.put_object.call_args_list[0][1]
-        error_args = shared_aws_mock.s3.put_object.call_args_list[1][1]
-
-        expect(len(log_args)).to.eq(4)
-        expect(log_args['Body']).to.contain(
-            b'\nUpdated document https://www.documentcloud.org/documents/1111126-CRID-234-CR.html '
-            b'access from private to public'
-            b'\ncrid 234 https://www.documentcloud.org/documents/1111126-CRID-234-CR.html'
-            b'\nCan not update document https://www.documentcloud.org/documents/1111127-CRID-234-CR.html '
-            b'access from organization to public'
-            b'\nUpdated document https://www.documentcloud.org/documents/1111128-CRID-234-CR.html '
-            b'access from private to public'
-            b'\nCan not update document https://www.documentcloud.org/documents/1111129-CRID-234-CR.html '
-            b'access from organization to public'
+        log_body = s3.Object(
+            'crawler_logs_bucket',
+            'documentcloud/documentcloud-2018-04-04-120001.txt'
+        ).get()['Body'].read().decode("utf-8")
+        expect(log_body).to.contain(
+            '\nUpdated document https://www.documentcloud.org/documents/1111126-CRID-234-CR.html '
+            'access from private to public'
+            '\ncrid 234 https://www.documentcloud.org/documents/1111126-CRID-234-CR.html'
+            '\nCan not update document https://www.documentcloud.org/documents/1111127-CRID-234-CR.html '
+            'access from organization to public'
         )
-        expect(log_args['Body']).to.contain(
-            b'\nCreating 2 attachments'
-            b'\nUpdating 5 attachments'
-            b'\nCurrent Total documentcloud attachments: 8'
-            b'\nDone importing!'
+        expect(log_body).to.contain(
+            '\nCreating 2 attachments'
+            '\nUpdating 5 attachments'
+            '\nCurrent Total documentcloud attachments: 8'
+            '\nDone importing!'
         )
-        expect(log_args['Body']).to.contain(
-            b'================ REQUEST REPROCESS TEXT FOR NO ORC TEXT DOCUMENTS ================'
-            b'\n[SUCCESS] Reprocessing text https://www.documentcloud.org/documents/2-CRID-234-CR.html'
-            b'\n[FAIL] Reprocessing text https://www.documentcloud.org/documents/999-CRID-234-CR.html '
-            b'failed with status code 404: Not Found'
-            b'\nSent reprocessing text requests: 1 success, 1 failure, 0 skipped for 2 no-text documents'
+        expect(log_body).to.contain(
+            '================ REQUEST REPROCESS TEXT FOR NO ORC TEXT DOCUMENTS ================'
+            '\n[SUCCESS] Reprocessing text https://www.documentcloud.org/documents/2-CRID-234-CR.html'
+            '\n[FAIL] Reprocessing text https://www.documentcloud.org/documents/999-CRID-234-CR.html '
+            'failed with status code 404: Not Found'
+            '\nSent reprocessing text requests: 1 success, 1 failure, 0 skipped for 2 no-text documents'
         )
-        expect(log_args['Bucket']).to.eq('crawler_logs_bucket')
-        expect(log_args['Key']).to.eq('documentcloud/documentcloud-2018-04-04-120001.txt')
-        expect(log_args['ContentType']).to.eq('text/plain')
 
-        expect(len(error_args)).to.eq(4)
-        expect(error_args['Body']).to.contain(b'Traceback (most recent call last):\nException\n')
-        expect(error_args['Bucket']).to.eq('crawler_logs_bucket')
-        expect(error_args['Key']).to.eq('documentcloud/error-traceback-log-documentcloud-2018-04-04-120001.txt')
-        expect(error_args['ContentType']).to.eq('text/plain')
+        error_body = s3.Object(
+            'crawler_logs_bucket',
+            'documentcloud/error-traceback-log-documentcloud-2018-04-04-120001.txt'
+        ).get()['Body'].read().decode("utf-8")
+        expect(error_body).to.contain('Traceback (most recent call last):\nException\n')
 
+    @mock_s3
     @override_settings(
         S3_BUCKET_OFFICER_CONTENT='officer-content-test',
         S3_BUCKET_PDF_DIRECTORY='pdf',
-        LAMBDA_FUNCTION_UPLOAD_PDF='uploadPdfTest'
+        LAMBDA_FUNCTION_UPLOAD_PDF='uploadPdfTest',
     )
     @patch(
         'document_cloud.importers.DocumentCloudAttachmentImporter.search_attachments',
         side_effect=Mock(side_effect=[Exception()])
     )
-    @patch('shared.attachment_importer.aws')
-    def test_search_and_update_attachments_failure(self, aws_mock, _):
+    def test_search_and_update_attachments_failure(self, _):
+        s3 = boto3.resource('s3', region_name='us-east-1')
+        s3.create_bucket(Bucket='crawler_logs_bucket')
         with freeze_time(datetime(2018, 4, 2, 12, 0, 1, tzinfo=pytz.utc)):
             DocumentCrawlerFactory(
                 source_type=AttachmentSourceType.DOCUMENTCLOUD,
@@ -1023,28 +1022,24 @@ class DocumentCloudAttachmentImporterTestCase(TestCase):
             'documentcloud/error-traceback-log-documentcloud-2018-04-04-120001.txt'
         )
 
-        failed_log_content = b'\nCreating 0 attachments' \
-                             b'\nUpdating 0 attachments' \
-                             b'\nCurrent Total documentcloud attachments: 0' \
-                             b'\nERROR: Error occurred while SEARCH ATTACHMENTS!'
+        failed_log_content = '\nCreating 0 attachments' \
+                             '\nUpdating 0 attachments' \
+                             '\nCurrent Total documentcloud attachments: 0' \
+                             '\nERROR: Error occurred while SEARCH ATTACHMENTS!'
 
-        error_log_content = b'Traceback (most recent call last):\nException\n'
+        error_log_content = 'Traceback (most recent call last):\nException\n'
 
-        log_args = aws_mock.s3.put_object.call_args_list
-        failed_log_args = log_args[0][1]
-        error_log_args = log_args[1][1]
+        failed_log_body = s3.Object(
+            'crawler_logs_bucket',
+            'documentcloud/documentcloud-2018-04-04-120001.txt'
+        ).get()['Body'].read().decode("utf-8")
+        expect(failed_log_body).to.contain(failed_log_content)
 
-        expect(len(failed_log_args)).to.eq(4)
-        expect(failed_log_args['Body']).to.contain(failed_log_content)
-        expect(failed_log_args['Bucket']).to.eq('crawler_logs_bucket')
-        expect(failed_log_args['Key']).to.eq('documentcloud/documentcloud-2018-04-04-120001.txt')
-        expect(failed_log_args['ContentType']).to.eq('text/plain')
-
-        expect(len(error_log_args)).to.eq(4)
-        expect(error_log_args['Body']).to.contain(error_log_content)
-        expect(error_log_args['Bucket']).to.eq('crawler_logs_bucket')
-        expect(error_log_args['Key']).to.eq('documentcloud/error-traceback-log-documentcloud-2018-04-04-120001.txt')
-        expect(error_log_args['ContentType']).to.eq('text/plain')
+        error_log_body = s3.Object(
+            'crawler_logs_bucket',
+            'documentcloud/error-traceback-log-documentcloud-2018-04-04-120001.txt'
+        ).get()['Body'].read().decode("utf-8")
+        expect(error_log_body).to.contain(error_log_content)
 
     def test_make_cloud_document_public_with_public_document(self):
         allegation = AllegationFactory(crid='234')

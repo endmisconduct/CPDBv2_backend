@@ -11,8 +11,8 @@ if __name__ == '__main__':
         with patch('tqdm.tqdm', lambda iterable, *args, **kwargs: iterable):
             os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings.test_without_migrations')
             os.environ.update({
-                'AWS_ACCESS_KEY_ID': '',
-                'AWS_SECRET_ACCESS_KEY': '',
+                'AWS_ACCESS_KEY_ID': 'fake-access-key-id',
+                'AWS_SECRET_ACCESS_KEY': 'fake-secret-access-key',
                 'AWS_DEFAULT_REGION': 'us-east-2',
             })
             execute_from_command_line(sys.argv)

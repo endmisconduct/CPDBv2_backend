@@ -8,6 +8,8 @@ import pytz
 from mock import patch, Mock, PropertyMock
 from robber import expect
 from freezegun import freeze_time
+import boto3
+from moto import mock_s3
 
 from document_cloud.constants import DOCUMENT_CRAWLER_SUCCESS, DOCUMENT_CRAWLER_FAILED
 from document_cloud.factories import DocumentCrawlerFactory
@@ -375,12 +377,14 @@ class CopaPortalAttachmentImporterTestCase(TestCase):
         expect(updated_attachment_file.title).to.eq('CRID 123 CR pdf file')
         expect(updated_attachment_file.external_last_updated).to.eq(datetime(2018, 10, 30, 15, 0, 3, tzinfo=pytz.utc))
 
+    @mock_s3
     @patch(
         'data_importer.copa_crawler.importers.CopaPortalAttachmentImporter.crawl_copa',
         side_effect=Mock(side_effect=[Exception()])
     )
-    @patch('shared.attachment_importer.aws')
-    def test_failed_crawl_and_update_attachments(self, aws_mock, _):
+    def test_failed_crawl_and_update_attachments(self, _):
+        s3 = boto3.resource('s3', region_name='us-east-1')
+        s3.create_bucket(Bucket='crawler_logs_bucket')
         logger = logging.getLogger('crawler.crawl_copa_data')
 
         with freeze_time(datetime(2018, 4, 2, 12, 0, 1, tzinfo=pytz.utc)):
@@ -416,28 +420,24 @@ class CopaPortalAttachmentImporterTestCase(TestCase):
         expect(crawler_log.log_key).to.eq('portal_copa/portal-copa-2018-04-04-120001.txt')
         expect(crawler_log.error_key).to.eq('portal_copa/error-traceback-log-portal-copa-2018-04-04-120001.txt')
 
-        failed_log_content = b'\nCreating 0 attachments' \
-                             b'\nUpdating 0 attachments' \
-                             b'\nCurrent Total portal_copa attachments: 0' \
-                             b'\nERROR: Error occurred while CRAWLING!'
+        failed_log_content = '\nCreating 0 attachments' \
+                             '\nUpdating 0 attachments' \
+                             '\nCurrent Total portal_copa attachments: 0' \
+                             '\nERROR: Error occurred while CRAWLING!'
 
-        error_log_content = b'Traceback (most recent call last):\nException\n'
+        error_log_content = 'Traceback (most recent call last):\nException\n'
 
-        log_args = aws_mock.s3.put_object.call_args_list
-        failed_log_args = log_args[0][1]
-        error_log_args = log_args[1][1]
+        failed_log_body = s3.Object(
+            'crawler_logs_bucket',
+            'portal_copa/portal-copa-2018-04-04-120001.txt'
+        ).get()['Body'].read().decode("utf-8")
+        expect(failed_log_body).to.contain(failed_log_content)
 
-        expect(len(failed_log_args)).to.eq(4)
-        expect(failed_log_args['Body']).to.contain(failed_log_content)
-        expect(failed_log_args['Bucket']).to.contain('crawler_logs_bucket')
-        expect(failed_log_args['Key']).to.eq('portal_copa/portal-copa-2018-04-04-120001.txt')
-        expect(failed_log_args['ContentType']).to.eq('text/plain')
-
-        expect(len(error_log_args)).to.eq(4)
-        expect(error_log_args['Body']).to.contain(error_log_content)
-        expect(error_log_args['Bucket']).to.contain('crawler_logs_bucket')
-        expect(error_log_args['Key']).to.eq('portal_copa/error-traceback-log-portal-copa-2018-04-04-120001.txt')
-        expect(error_log_args['ContentType']).to.eq('text/plain')
+        error_log_body = s3.Object(
+            'crawler_logs_bucket',
+            'portal_copa/error-traceback-log-portal-copa-2018-04-04-120001.txt'
+        ).get()['Body'].read().decode("utf-8")
+        expect(error_log_body).to.contain(error_log_content)
 
     @patch('data_importer.copa_crawler.importers.DocumentCloud')
     def test_upload_portal_copa_documents(self, DocumentCloudMock):
@@ -647,12 +647,14 @@ class CopaSummaryReportsAttachmentImporterTestCase(TestCase):
         expect(log_args['Key']).to.contain('summary_reports_copa/summary-reports-copa-2018-04-04-120001.txt')
         expect(log_args['ContentType']).to.eq('text/plain')
 
+    @mock_s3
     @patch(
         'data_importer.copa_crawler.importers.CopaSummaryReportsAttachmentImporter.crawl_copa',
         side_effect=Mock(side_effect=[Exception()])
     )
-    @patch('shared.attachment_importer.aws')
-    def test_failed_crawl_and_update_attachments(self, aws_mock, _):
+    def test_failed_crawl_and_update_attachments(self, _):
+        s3 = boto3.resource('s3', region_name='us-east-1')
+        s3.create_bucket(Bucket='crawler_logs_bucket')
         logger = logging.getLogger('crawler.crawl_copa_data')
 
         with freeze_time(datetime(2018, 4, 2, 12, 0, 1, tzinfo=pytz.utc)):
@@ -690,30 +692,24 @@ class CopaSummaryReportsAttachmentImporterTestCase(TestCase):
             'summary_reports_copa/error-traceback-log-summary-reports-copa-2018-04-04-120001.txt'
         )
 
-        failed_log_content = b'\nCreating 0 attachments' \
-                             b'\nUpdating 0 attachments' \
-                             b'\nCurrent Total summary_reports_copa attachments: 0' \
-                             b'\nERROR: Error occurred while CRAWLING!'
+        failed_log_content = '\nCreating 0 attachments' \
+                             '\nUpdating 0 attachments' \
+                             '\nCurrent Total summary_reports_copa attachments: 0' \
+                             '\nERROR: Error occurred while CRAWLING!'
 
-        error_log_content = b'Traceback (most recent call last):\nException\n'
+        error_log_content = 'Traceback (most recent call last):\nException\n'
 
-        log_args = aws_mock.s3.put_object.call_args_list
-        failed_log_args = log_args[0][1]
-        error_log_args = log_args[1][1]
+        failed_log_body = s3.Object(
+            'crawler_logs_bucket',
+            'summary_reports_copa/summary-reports-copa-2018-04-04-120001.txt'
+        ).get()['Body'].read().decode("utf-8")
+        expect(failed_log_body).to.contain(failed_log_content)
 
-        expect(len(failed_log_args)).to.eq(4)
-        expect(failed_log_args['Body']).to.contain(failed_log_content)
-        expect(failed_log_args['Bucket']).to.eq('crawler_logs_bucket')
-        expect(failed_log_args['Key']).to.eq('summary_reports_copa/summary-reports-copa-2018-04-04-120001.txt')
-        expect(failed_log_args['ContentType']).to.eq('text/plain')
-
-        expect(len(error_log_args)).to.eq(4)
-        expect(error_log_args['Body']).to.contain(error_log_content)
-        expect(error_log_args['Bucket']).to.eq('crawler_logs_bucket')
-        expect(error_log_args['Key']).to.eq(
+        error_log_body = s3.Object(
+            'crawler_logs_bucket',
             'summary_reports_copa/error-traceback-log-summary-reports-copa-2018-04-04-120001.txt'
-        )
-        expect(error_log_args['ContentType']).to.eq('text/plain')
+        ).get()['Body'].read().decode("utf-8")
+        expect(error_log_body).to.contain(error_log_content)
 
     @patch('data_importer.copa_crawler.importers.DocumentCloud')
     def test_upload_summary_reports_copa_documents(self, DocumentCloudMock):
