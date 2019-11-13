@@ -14,6 +14,7 @@ class DocumentCrawler(TimeStampsModel):
     num_updated_documents = models.IntegerField(default=0)
     status = models.CharField(max_length=20, null=True, choices=DOCUMENT_CRAWLER_STATUS_CHOICES)
     log_key = models.CharField(max_length=255, null=True)
+    error_key = models.CharField(max_length=255, null=True)
 
     @property
     def log_url(self):
@@ -23,6 +24,20 @@ class DocumentCrawler(TimeStampsModel):
                 Params={
                     'Bucket': settings.S3_BUCKET_CRAWLER_LOG,
                     'Key': self.log_key,
+                },
+                ExpiresIn=604800
+            )
+        else:
+            return None
+
+    @property
+    def error_url(self):
+        if self.error_key:
+            return aws.s3.generate_presigned_url(
+                ClientMethod='get_object',
+                Params={
+                    'Bucket': settings.S3_BUCKET_CRAWLER_LOG,
+                    'Key': self.error_key,
                 },
                 ExpiresIn=604800
             )

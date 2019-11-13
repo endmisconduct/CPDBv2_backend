@@ -24,16 +24,28 @@ class BaseAttachmentImporter(object):
         self.logger.info(message)
         self.log_data.append(message)
 
-    def generate_s3_log_file(self):
-        filename = datetime.now(pytz.utc).strftime(format='%Y-%m-%d-%H%M%S.txt')
-        log_key = f'{self.crawler_name}/{self.crawler_name.replace("_", "-")}-{filename}'
+    def generate_s3_file(self, filename, data):
+        timestamps = datetime.now(pytz.utc).strftime(format='%Y-%m-%d-%H%M%S')
+        s3_key = f'{self.crawler_name}/{filename}-{timestamps}.txt'
+
         aws.s3.put_object(
-            Body='\n'.join(self.log_data).encode(),
+            Body=data.encode(),
             Bucket=settings.S3_BUCKET_CRAWLER_LOG,
-            Key=log_key,
+            Key=s3_key,
             ContentType='text/plain'
         )
-        return log_key
+        return s3_key
+
+    def generate_s3_log_file(self):
+        filename = self.crawler_name.replace("_", "-")
+        data = '\n'.join(self.log_data)
+
+        return self.generate_s3_file(filename, data)
+
+    def generate_s3_error_log_file(self, error):
+        filename = f'error-traceback-log-{self.crawler_name.replace("_", "-")}'
+
+        return self.generate_s3_file(filename, error)
 
     def get_current_num_successful_run(self):
         return DocumentCrawler.objects.filter(source_type=self.source_type, status='Success').count()
@@ -46,22 +58,23 @@ class BaseAttachmentImporter(object):
         self.log_info('')
         self.log_info(f'{"="*left_space} {self.current_step} {"="*right_space}')
 
-    def record_crawler_result(self, status, message):
+    def record_crawler_result(self, status, message, error=None):
         num_documents = AttachmentFile.objects.filter(
             source_type__in=self.all_source_types
         ).count()
         num_new_attachments = len(self.new_attachments)
+        num_successful_run = self.get_current_num_successful_run()
 
         self.log_info(f'Creating {num_new_attachments} attachments')
         self.log_info(f'Updating {self.num_updated_attachments} attachments')
         self.log_info(f'Current Total {self.crawler_name} attachments: {num_documents}')
         self.log_info(message)
 
-        log_key = self.generate_s3_log_file()
-
-        num_successful_run = self.get_current_num_successful_run()
         if status == DOCUMENT_CRAWLER_SUCCESS:
             num_successful_run += 1
+
+        log_key = self.generate_s3_log_file()
+        error_key = self.generate_s3_error_log_file(error) if error else None
 
         DocumentCrawler.objects.create(
             source_type=self.source_type,
@@ -70,11 +83,12 @@ class BaseAttachmentImporter(object):
             num_new_documents=num_new_attachments,
             num_updated_documents=self.num_updated_attachments,
             num_successful_run=num_successful_run,
-            log_key=log_key
+            log_key=log_key,
+            error_key=error_key,
         )
 
     def record_success_crawler_result(self):
         self.record_crawler_result(DOCUMENT_CRAWLER_SUCCESS, 'Done importing!')
 
-    def record_failed_crawler_result(self):
-        self.record_crawler_result(DOCUMENT_CRAWLER_FAILED, f'ERROR: Error occurred while {self.current_step}!')
+    def record_failed_crawler_result(self, error):
+        self.record_crawler_result(DOCUMENT_CRAWLER_FAILED, f'ERROR: Error occurred while {self.current_step}!', error)

@@ -2,6 +2,7 @@ import re
 import requests
 import urllib3
 from urllib.error import HTTPError
+import traceback
 
 from django.db.models import Q
 from django.conf import settings
@@ -210,5 +211,6 @@ class DocumentCloudAttachmentImporter(BaseAttachmentImporter):
             self.record_success_crawler_result()
             send_cr_attachment_available_email(self.new_attachments)
         except Exception:
-            self.record_failed_crawler_result()
+            traceback_log = traceback.format_exc()
+            self.record_failed_crawler_result(traceback_log)
             return []

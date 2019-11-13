@@ -35,3 +35,32 @@ class DocumentCrawlerTestCase(TestCase):
         )
 
         expect(document_crawler.log_url).to.be.none()
+
+    @override_settings(S3_BUCKET_CRAWLER_LOG='crawler_logs_bucket')
+    @patch('document_cloud.models.document_crawler.aws')
+    def test_error_url(self, aws_mock):
+        aws_mock.s3.generate_presigned_url.return_value = 'presigned_error_url'
+
+        document_crawler = DocumentCrawlerFactory(
+            id=1,
+            source_type='SUMMARY_REPORTS_COPA',
+            error_key='summary_reports_copa/error-traceback-log-2019-02-27-100142.txt'
+        )
+
+        expect(document_crawler.error_url).to.eq('presigned_error_url')
+        expect(aws_mock.s3.generate_presigned_url).to.be.called_with(
+            ClientMethod='get_object',
+            Params={
+                'Bucket': 'crawler_logs_bucket',
+                'Key': 'summary_reports_copa/error-traceback-log-2019-02-27-100142.txt',
+            },
+            ExpiresIn=604800
+        )
+
+    def test_error_url_with_empty_error_key(self):
+        document_crawler = DocumentCrawlerFactory(
+            id=1,
+            source_type='SUMMARY_REPORTS_COPA',
+        )
+
+        expect(document_crawler.error_url).to.be.none()

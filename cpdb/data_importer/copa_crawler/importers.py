@@ -1,4 +1,5 @@
 from tqdm import tqdm
+import traceback
 
 from django.conf import settings
 
@@ -172,7 +173,8 @@ class CopaBaseAttachmentImporter(BaseAttachmentImporter):
             self.set_current_step('RECORDING CRAWLER RESULT')
             self.record_success_crawler_result()
         except Exception:
-            self.record_failed_crawler_result()
+            traceback_log = traceback.format_exc()
+            self.record_failed_crawler_result(traceback_log)
             return []
         return self.new_attachments
 

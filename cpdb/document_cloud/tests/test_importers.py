@@ -990,27 +990,40 @@ class DocumentCloudAttachmentImporterTestCase(TestCase):
         with freeze_time(datetime(2018, 4, 4, 12, 0, 1, tzinfo=pytz.utc)):
             DocumentCloudAttachmentImporter(self.logger).search_and_update_attachments()
 
-        crawler_log = DocumentCrawler.objects.order_by('-created_at').first()
-        expect(crawler_log.source_type).to.eq(AttachmentSourceType.DOCUMENTCLOUD)
-        expect(crawler_log.status).to.eq(DOCUMENT_CRAWLER_FAILED)
-        expect(crawler_log.num_documents).to.eq(0)
-        expect(crawler_log.num_new_documents).to.eq(0)
-        expect(crawler_log.num_updated_documents).to.eq(0)
-        expect(crawler_log.num_successful_run).to.eq(1)
-        expect(crawler_log.log_key).to.eq('documentcloud/documentcloud-2018-04-04-120001.txt')
+        failed_crawler_log = DocumentCrawler.objects.order_by('-created_at').first()
+        expect(failed_crawler_log.source_type).to.eq(AttachmentSourceType.DOCUMENTCLOUD)
+        expect(failed_crawler_log.status).to.eq(DOCUMENT_CRAWLER_FAILED)
+        expect(failed_crawler_log.num_documents).to.eq(0)
+        expect(failed_crawler_log.num_new_documents).to.eq(0)
+        expect(failed_crawler_log.num_updated_documents).to.eq(0)
+        expect(failed_crawler_log.num_successful_run).to.eq(1)
+        expect(failed_crawler_log.log_key).to.eq('documentcloud/documentcloud-2018-04-04-120001.txt')
+        expect(failed_crawler_log.error_key).to.eq(
+            'documentcloud/error-traceback-log-documentcloud-2018-04-04-120001.txt'
+        )
 
-        log_content = b'\nCreating 0 attachments' \
-                      b'\nUpdating 0 attachments' \
-                      b'\nCurrent Total documentcloud attachments: 0' \
-                      b'\nERROR: Error occurred while SEARCH ATTACHMENTS!'
+        failed_log_content = b'\nCreating 0 attachments' \
+                             b'\nUpdating 0 attachments' \
+                             b'\nCurrent Total documentcloud attachments: 0' \
+                             b'\nERROR: Error occurred while SEARCH ATTACHMENTS!'
 
-        log_args = aws_mock.s3.put_object.call_args[1]
+        error_log_content = b'Traceback (most recent call last):\nException\n'
 
-        expect(len(log_args)).to.eq(4)
-        expect(log_args['Body']).to.contain(log_content)
-        expect(log_args['Bucket']).to.eq('crawler_logs_bucket')
-        expect(log_args['Key']).to.eq('documentcloud/documentcloud-2018-04-04-120001.txt')
-        expect(log_args['ContentType']).to.eq('text/plain')
+        log_args = aws_mock.s3.put_object.call_args_list
+        failed_log_args = log_args[0][1]
+        error_log_args = log_args[1][1]
+
+        expect(len(failed_log_args)).to.eq(4)
+        expect(failed_log_args['Body']).to.contain(failed_log_content)
+        expect(failed_log_args['Bucket']).to.eq('crawler_logs_bucket')
+        expect(failed_log_args['Key']).to.eq('documentcloud/documentcloud-2018-04-04-120001.txt')
+        expect(failed_log_args['ContentType']).to.eq('text/plain')
+
+        expect(len(error_log_args)).to.eq(4)
+        expect(error_log_args['Body']).to.contain(error_log_content)
+        expect(error_log_args['Bucket']).to.eq('crawler_logs_bucket')
+        expect(error_log_args['Key']).to.eq('documentcloud/error-traceback-log-documentcloud-2018-04-04-120001.txt')
+        expect(error_log_args['ContentType']).to.eq('text/plain')
 
     def test_make_cloud_document_public_with_public_document(self):
         allegation = AllegationFactory(crid='234')
