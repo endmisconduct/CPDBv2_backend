@@ -1,0 +1,45 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: numeracy
+  labels:
+    app: numeracy
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: numeracy
+    spec:
+      containers:
+      - name: numeracy
+        image: numeracy/onprem:latest
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 1
+            memory: 1Gi
+        env:
+        - name: NU_GOOGLE_CLIENT_ID
+          value: "${NU_GOOGLE_CLIENT_ID}"
+        - name: NU_GOOGLE_CLIENT_SECRET
+          value: "${NU_GOOGLE_CLIENT_SECRET}"
+        - name: NU_HOST
+          value: "${NU_HOST}"
+        - name: NU_LICENSE
+          value: "${NU_LICENSE}"
+        ports:
+        - containerPort: 9000
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: numeracy
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    targetPort: 9000
+  selector:
+    app: numeracy

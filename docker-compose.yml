@@ -67,7 +67,7 @@ services:
     depends_on:
       - numeracy
   numeracy:
-    build: ./docker/numeracy
+    image: "numeracy/onprem:latest"
     env_file: .env
     volumes:
       - ./numeracy-data:/data

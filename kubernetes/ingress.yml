@@ -11,6 +11,7 @@ spec:
         - ${DESKTOP_DOMAIN}
         - ${MOBILE_DOMAIN}
         - ${API_DOMAIN}
+        - ${NUMERACY_DOMAIN}
       secretName: tls-secret
   rules:
     - host: ${DESKTOP_DOMAIN}
@@ -45,4 +46,11 @@ spec:
           - path: /
             backend:
               serviceName: gunicorn
+              servicePort: 80
+    - host: ${NUMERACY_DOMAIN}
+      http:
+        paths:
+          - path: /
+            backend:
+              serviceName: numeracy
               servicePort: 80
