@@ -26,8 +26,6 @@ spec:
           value: "${NU_GOOGLE_CLIENT_SECRET}"
         - name: NU_HOST
           value: "${NU_HOST}"
-        - name: NU_LICENSE
-          value: "${NU_LICENSE}"
         ports:
         - containerPort: 9000
 
