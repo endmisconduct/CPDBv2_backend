@@ -82,7 +82,8 @@ class DocumentCloudAttachmentImporter(BaseAttachmentImporter):
                 updated_cloud_document = self.client.documents.get(cloud_document.id)
                 result = updated_cloud_document.access == 'public'
             except Exception:
-                pass
+                traceback_log = traceback.format_exc()
+                self.log_error(traceback_log)
 
             if result:
                 self.log_info(
@@ -217,5 +218,6 @@ class DocumentCloudAttachmentImporter(BaseAttachmentImporter):
             send_cr_attachment_available_email(self.new_attachments)
         except Exception:
             traceback_log = traceback.format_exc()
-            self.record_failed_crawler_result(traceback_log)
+            self.log_error(traceback_log)
+            self.record_failed_crawler_result()
             return []

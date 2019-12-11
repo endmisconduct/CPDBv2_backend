@@ -174,7 +174,8 @@ class CopaBaseAttachmentImporter(BaseAttachmentImporter):
             self.record_success_crawler_result()
         except Exception:
             traceback_log = traceback.format_exc()
-            self.record_failed_crawler_result(traceback_log)
+            self.log_error(traceback_log)
+            self.record_failed_crawler_result()
             return []
         return self.new_attachments
 

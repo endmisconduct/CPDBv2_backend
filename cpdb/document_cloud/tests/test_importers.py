@@ -692,6 +692,24 @@ class DocumentCloudAttachmentImporterTestCase(TestCase):
             'access': 'public',
         })
 
+        save_error_document = create_object({
+            'id': '1111130-CRID-234-CR',
+            'documentcloud_id': '1111130',
+            'allegation': allegation,
+            'source_type': AttachmentSourceType.PORTAL_COPA_DOCUMENTCLOUD,
+            'url': 'https://www.documentcloud.org/documents/2-CRID-234-CR.html',
+            'canonical_url': 'https://www.documentcloud.org/documents/1111128-CRID-234-CR.html',
+            'document_type': 'CR',
+            'title': 'CRID-234-CR-2',
+            'normal_image_url': 'http://web.com/new-image',
+            'updated_at': datetime(2017, 1, 2, tzinfo=pytz.utc),
+            'created_at': datetime(2017, 1, 1, tzinfo=pytz.utc),
+            'full_text': 'text content'.encode('utf8'),
+            'pages': 2,
+            'access': 'private',
+            'save': Mock(side_effect=Exception)
+        })
+
         updated_failed = create_object({'access': 'organization'})
 
         return_values = {
@@ -699,6 +717,7 @@ class DocumentCloudAttachmentImporterTestCase(TestCase):
             '1111127-CRID-234-CR': updated_failed,
             '1111128-CRID-234-CR': updated_cloud_document_2,
             '1111129-CRID-234-CR': updated_failed,
+            '1111130-CRID-234-CR': save_error_document,
         }
 
         def side_effect(arg):
@@ -718,6 +737,7 @@ class DocumentCloudAttachmentImporterTestCase(TestCase):
             new_organization_cloud_document,
             updated_private_cloud_document,
             updated_organization_cloud_document,
+            save_error_document,
         ]
 
         updated_attachment_3 = AttachmentFileFactory(
@@ -919,8 +939,10 @@ class DocumentCloudAttachmentImporterTestCase(TestCase):
         expect(crawler_log.num_updated_documents).to.eq(5)
         expect(crawler_log.num_successful_run).to.eq(1)
         expect(crawler_log.log_key).to.eq('documentcloud/documentcloud-2018-04-04-120001.txt')
+        expect(crawler_log.error_key).to.eq('documentcloud/error-traceback-log-documentcloud-2018-04-04-120001.txt')
 
-        log_args = shared_aws_mock.s3.put_object.call_args[1]
+        log_args = shared_aws_mock.s3.put_object.call_args_list[0][1]
+        error_args = shared_aws_mock.s3.put_object.call_args_list[1][1]
 
         expect(len(log_args)).to.eq(4)
         expect(log_args['Body']).to.contain(
@@ -950,6 +972,12 @@ class DocumentCloudAttachmentImporterTestCase(TestCase):
         expect(log_args['Bucket']).to.eq('crawler_logs_bucket')
         expect(log_args['Key']).to.eq('documentcloud/documentcloud-2018-04-04-120001.txt')
         expect(log_args['ContentType']).to.eq('text/plain')
+
+        expect(len(error_args)).to.eq(4)
+        expect(error_args['Body']).to.contain(b'Traceback (most recent call last):\nException\n')
+        expect(error_args['Bucket']).to.eq('crawler_logs_bucket')
+        expect(error_args['Key']).to.eq('documentcloud/error-traceback-log-documentcloud-2018-04-04-120001.txt')
+        expect(error_args['ContentType']).to.eq('text/plain')
 
     @override_settings(
         S3_BUCKET_OFFICER_CONTENT='officer-content-test',

@@ -14,6 +14,7 @@ class BaseAttachmentImporter(object):
 
     def __init__(self, logger):
         self.log_data = []
+        self.error_data = []
         self.logger = logger
         self.new_attachments = []
         self.num_updated_attachments = 0
@@ -23,6 +24,10 @@ class BaseAttachmentImporter(object):
     def log_info(self, message):
         self.logger.info(message)
         self.log_data.append(message)
+
+    def log_error(self, error):
+        self.logger.info(error)
+        self.error_data.append(error)
 
     def generate_s3_file(self, filename, data):
         timestamps = datetime.now(pytz.utc).strftime(format='%Y-%m-%d-%H%M%S')
@@ -42,10 +47,11 @@ class BaseAttachmentImporter(object):
 
         return self.generate_s3_file(filename, data)
 
-    def generate_s3_error_log_file(self, error):
+    def generate_s3_error_log_file(self):
         filename = f'error-traceback-log-{self.crawler_name.replace("_", "-")}'
+        data = '\n'.join(self.error_data)
 
-        return self.generate_s3_file(filename, error)
+        return self.generate_s3_file(filename, data)
 
     def get_current_num_successful_run(self):
         return DocumentCrawler.objects.filter(source_type=self.source_type, status='Success').count()
@@ -58,7 +64,7 @@ class BaseAttachmentImporter(object):
         self.log_info('')
         self.log_info(f'{"="*left_space} {self.current_step} {"="*right_space}')
 
-    def record_crawler_result(self, status, message, error=None):
+    def record_crawler_result(self, status, message):
         num_documents = AttachmentFile.objects.filter(
             source_type__in=self.all_source_types
         ).count()
@@ -74,7 +80,7 @@ class BaseAttachmentImporter(object):
             num_successful_run += 1
 
         log_key = self.generate_s3_log_file()
-        error_key = self.generate_s3_error_log_file(error) if error else None
+        error_key = self.generate_s3_error_log_file() if self.error_data else None
 
         DocumentCrawler.objects.create(
             source_type=self.source_type,
@@ -90,5 +96,5 @@ class BaseAttachmentImporter(object):
     def record_success_crawler_result(self):
         self.record_crawler_result(DOCUMENT_CRAWLER_SUCCESS, 'Done importing!')
 
-    def record_failed_crawler_result(self, error):
-        self.record_crawler_result(DOCUMENT_CRAWLER_FAILED, f'ERROR: Error occurred while {self.current_step}!', error)
+    def record_failed_crawler_result(self):
+        self.record_crawler_result(DOCUMENT_CRAWLER_FAILED, f'ERROR: Error occurred while {self.current_step}!')
