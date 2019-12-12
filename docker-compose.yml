@@ -67,7 +67,7 @@ services:
     depends_on:
       - numeracy
   numeracy:
-    image: "numeracy/onprem:latest"
+    image: "numeracy/onprem:0.52"
     env_file: .env
     volumes:
       - ./numeracy-data:/data
