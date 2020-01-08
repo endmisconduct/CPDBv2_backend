@@ -21,7 +21,7 @@ else
         shift
     fi
 
-    docker-compose run web cpdb/manage.py $@
+    docker-compose run web cpdb/manage.py "$@"
     exit 0
 fi
 
@@ -30,4 +30,4 @@ cd $DIR/..
 
 POD_NAME="$(kubectl get pods --selector=app=gunicorn -n $NAMESPACE --output=jsonpath={.items..metadata.name})"
 shift
-kubectl exec -it -n $NAMESPACE $POD_NAME -- cpdb/manage.py $@
+kubectl exec -it -n $NAMESPACE $POD_NAME -- cpdb/manage.py "$@"
