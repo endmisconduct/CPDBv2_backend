@@ -22,7 +22,7 @@ class Command(BaseCommand):
         documents = self.listdir_pdf_files(source_folder)
 
         for document in tqdm(documents):
-            source_type = AttachmentSourceType.BATCH_PROVIDED
+            source_type = AttachmentSourceType.DOCUMENTCLOUD
 
             try:
                 client.documents.upload(
