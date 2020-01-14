@@ -240,8 +240,8 @@ class DocumentCloudAttachmentImporter(BaseAttachmentImporter):
             self.set_current_step('EXTRACT COPA SUMMARY')
             self.extract_copa_summary()
             self.set_current_step('RECORDING CRAWLER RESULT')
-            self.record_success_crawler_result()
-            send_cr_attachment_available_email(self.new_attachments)
+            # self.record_success_crawler_result()
+            # send_cr_attachment_available_email(self.new_attachments)
         except Exception:
             self.record_failed_crawler_result()
             return []
