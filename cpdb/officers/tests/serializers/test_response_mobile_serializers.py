@@ -79,6 +79,7 @@ class OfficerInfoMobileSerializerTestCase(TestCase):
             trr_count=7,
             major_award_count=8,
             honorable_mention_percentile='88.8800',
+            has_unique_name=True
         )
 
         OfficerBadgeNumberFactory(
@@ -139,6 +140,7 @@ class OfficerInfoMobileSerializerTestCase(TestCase):
             'trr_count': 7,
             'major_award_count': 8,
             'honorable_mention_percentile': 88.88,
+            'has_unique_name': True,
             'percentiles': [
                 {
                     'id': 123,

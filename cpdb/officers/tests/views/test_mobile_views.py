@@ -35,7 +35,8 @@ class OfficersMobileViewSetTestCase(OfficerSummaryTestCaseMixin, APITestCase):
             active=ACTIVE_YES_CHOICE, birth_year=1960, complaint_percentile=32.5,
             sustained_count=1, allegation_count=2, discipline_count=1, trr_count=1,
             civilian_compliment_count=1, honorable_mention_count=1, major_award_count=1,
-            last_unit_id=1, current_badge='123456'
+            last_unit_id=1, current_badge='123456',
+            has_unique_name=True
         )
         allegation = AllegationFactory(incident_date=datetime(2002, 3, 1, tzinfo=pytz.utc))
         internal_allegation = AllegationFactory(
@@ -111,7 +112,8 @@ class OfficersMobileViewSetTestCase(OfficerSummaryTestCaseMixin, APITestCase):
             'trr_count': 1,
             'major_award_count': 1,
             'complaint_percentile': 32.5,
-            'percentiles': []
+            'percentiles': [],
+            'has_unique_name': True,
         }
         expect(response.data).to.eq(expected_response)
 
@@ -126,7 +128,6 @@ class OfficersMobileViewSetTestCase(OfficerSummaryTestCaseMixin, APITestCase):
         trr_max=datetime(2004, 12, 31, tzinfo=pytz.utc)
     )
     def test_retrieve(self):
-
         # main officer
         officer = OfficerFactory(
             tags=[],
@@ -136,7 +137,8 @@ class OfficersMobileViewSetTestCase(OfficerSummaryTestCaseMixin, APITestCase):
             honorable_mention_percentile=66.6667,
             sustained_count=1, allegation_count=3, discipline_count=1, trr_count=1,
             civilian_compliment_count=1, honorable_mention_count=1, major_award_count=1,
-            last_unit_id=1, current_badge='123456'
+            last_unit_id=1, current_badge='123456',
+            has_unique_name=True
         )
 
         allegation = AllegationFactory(incident_date=datetime(2002, 3, 1, tzinfo=pytz.utc))
@@ -246,6 +248,7 @@ class OfficersMobileViewSetTestCase(OfficerSummaryTestCaseMixin, APITestCase):
             'major_award_count': 1,
             'complaint_percentile': 32.5,
             'honorable_mention_percentile': 66.6667,
+            'has_unique_name': True,
         }
         expect(response.data).to.eq(expected_response)
 

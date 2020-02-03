@@ -36,6 +36,7 @@ class OfficerInfoMobileSerializer(NoNullSerializer):
     historic_badges = serializers.ListField(child=serializers.CharField())
     gender = serializers.CharField(source='gender_display')
     percentiles = serializers.SerializerMethodField()
+    has_unique_name = serializers.BooleanField()
 
     allegation_count = serializers.IntegerField()
     complaint_percentile = serializers.FloatField()
