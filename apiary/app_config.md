@@ -4,7 +4,7 @@
 
 + Response 200 (application/json)
         {
-            "visual_token_colors": [
+            "VISUAL_TOKEN_COLORS": [
                 {
                     "lower_range": 0,
                     "upper_range": 13,
@@ -20,5 +20,8 @@
                     "upper_range": 100,
                     "color": "#f54f54"
                 }
-            ]
+            ],
+            "CONFIG_1": "VALUE 1",
+            "CONFIG_2": "VALUE 2",
+            "CONFIG_3": "VALUE 3"
         }
