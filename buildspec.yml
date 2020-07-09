@@ -3,6 +3,6 @@ version: 0.1
 phases:
   install:
     commands:
-    - echo buildspec testing...
+    - echo buildspec testing....
 
 
