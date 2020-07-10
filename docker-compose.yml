@@ -10,14 +10,14 @@ services:
       AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
       AWS_DEFAULT_REGION: $AWS_DEFAULT_REGION
     ports:
-      - "8000:80"
+      - "8000:8080"
     depends_on:
       - postgres
       - elasticsearch
     volumes:
       - .:/usr/src/app
       - logfiles:/logfiles
-    command: cpdb/manage.py runserver 0.0.0.0:80
+    command: cpdb/manage.py runserver 0.0.0.0:8080
     tty: true
     stdin_open: true
   postgres:
