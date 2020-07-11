@@ -20,10 +20,9 @@ phases:
     commands:
       - echo Build started on `date`
       - echo Building the Docker image...
-      - yarn build
       - docker build -t $REPOSITORY_URI:latest .
       - docker tag $REPOSITORY_URI:latest $REPOSITORY_URI:$IMAGE_TAG
-      - ContainerName="cpdbfrontend"
+      - ContainerName="cpdbbackend"
       - ImageURI=$REPOSITORY_URI:latest
       - printf '[{"name":"CONTAINER_NAME","imageUri":"IMAGE_URI"}]' > imagedefinitions.json
       - sed -i -e "s|CONTAINER_NAME|$ContainerName|g" imagedefinitions.json
