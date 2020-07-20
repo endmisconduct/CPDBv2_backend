@@ -19,7 +19,7 @@ phases:
       - export BASH_ENV="/tmp/workspace/bash.env"
       - touch $BASH_ENV
       - echo 'export PATH="/home/gunicorn/.local/bin/:$PATH"' >> $BASH_ENV
-      - source $BASH_ENV
+      - . $BASH_ENV
       - pip install --user -r requirements/test.txt
       - flake8
       - ./cpdb/manage.py makemigrations --dry-run --settings=config.settings.test
@@ -36,7 +36,7 @@ phases:
       - IMAGE_TAG=${COMMIT_HASH:=latest}
       - export NAMESPACE=production
       - export ENV_FILE=prod.env
-      - source $ENV_FILE
+      - . $ENV_FILE
       - export $(cut -d= -f1 $ENV_FILE)
       - bin/ensure_gunicorn_deployment.py -n $NAMESPACE
       - kept_cronjobs=('update_documents', 'crawl_copa_data', 'upload_document_requests', 'update_attachment_downloads_and_views_count', 'update_titles_to_documentcloud', 'rebuild_index_daily', 'webhook_statuses_check')
