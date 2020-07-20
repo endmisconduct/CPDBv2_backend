@@ -15,8 +15,11 @@ phases:
     commands:
       - echo Logging in to Amazon ECR...
       - aws --version
-      - echo $BASH_ENV
+      - mkdir -p /tmp/workspace 
+      - export BASH_ENV="/tmp/workspace/bash.env"
+      - touch $BASH_ENV
       - echo 'export PATH="/home/gunicorn/.local/bin/:$PATH"' >> $BASH_ENV
+      - source $BASH_ENV
       - pip install --user -r requirements/test.txt
       - flake8
       - ./cpdb/manage.py makemigrations --dry-run --settings=config.settings.test
