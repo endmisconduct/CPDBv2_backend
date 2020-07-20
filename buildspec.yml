@@ -21,6 +21,7 @@ phases:
       - echo 'export PATH="/home/gunicorn/.local/bin/:$PATH"' >> $BASH_ENV
       - . $BASH_ENV
       - pip install --user -r requirements/test.txt
+      - pip install flake8
       - flake8
       - ./cpdb/manage.py makemigrations --dry-run --settings=config.settings.test
       - mkdir -p /tmp/workspace
