@@ -11,7 +11,7 @@ phases:
     commands:
       - apt-get update -y
       - apt-get install -y yarn
-
+      - apt-get install -y gdal-bin
   pre_build:
     commands:
       - echo Logging in to Amazon ECR...
