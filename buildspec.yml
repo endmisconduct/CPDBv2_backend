@@ -1,5 +1,11 @@
 version: 0.2
-
+env:
+  variables:
+      DJANGO_SETTINGS_MODULE: config.settings
+      DB_HOST: localhost
+      DB_USER: cpdb
+      DB_PASSWORD: password
+      DB_NAME: cpdb
 phases:
   install:
     commands:
@@ -9,6 +15,14 @@ phases:
     commands:
       - echo Logging in to Amazon ECR...
       - aws --version
+      - echo 'export PATH="/home/gunicorn/.local/bin/:$PATH"' >> $BASH_ENV
+      - pip install --user -r requirements/test.txt
+      - flake8
+      - ./cpdb/manage.py makemigrations --dry-run --settings=config.settings.test
+      - mkdir -p /tmp/workspace
+      - echo "latest" > /tmp/workspace/buildnum
+      - coverage run cpdb/manage.py test --noinput --nologcapture 
+      - coverage report --omit="/home/ubuntu/virtuanenvs/*"
       - docker info
       - yarn install
       - $(aws ecr get-login --region $AWS_DEFAULT_REGION --no-include-email)
@@ -16,6 +30,14 @@ phases:
       - AWS_ACCOUNT=265935852574.dkr.ecr.us-east-2.amazonaws.com
       - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
       - IMAGE_TAG=${COMMIT_HASH:=latest}
+      - export NAMESPACE=production
+      - export ENV_FILE=prod.env
+      - source $ENV_FILE
+      - export $(cut -d= -f1 $ENV_FILE)
+      - bin/ensure_gunicorn_deployment.py -n $NAMESPACE
+      - kept_cronjobs=('update_documents', 'crawl_copa_data', 'upload_document_requests', 'update_attachment_downloads_and_views_count', 'update_titles_to_documentcloud', 'rebuild_index_daily', 'webhook_statuses_check')
+      - export ENV_TAG="--production"
+      - REBUILD_INDEX_TIME=7
   build:
     commands:
       - echo Build started on `date`
@@ -27,12 +49,24 @@ phases:
       - printf '[{"name":"CONTAINER_NAME","imageUri":"IMAGE_URI"}]' > imagedefinitions.json
       - sed -i -e "s|CONTAINER_NAME|$ContainerName|g" imagedefinitions.json
       - sed -i -e "s|IMAGE_URI|$ImageURI|g" imagedefinitions.json
+      - docker push $REPOSITORY_URI:latest
+      - docker push $REPOSITORY_URI:$IMAGE_TAG 
+      - bin/run_job.sh $ENVFLAG $(cat /tmp/workspace/buildnum) collectstatic --no-input
+      - bin/run_job.sh $ENVFLAG $(cat /tmp/workspace/buildnum) migrate
+      - bin/run_job.sh $ENVFLAG $(cat /tmp/workspace/buildnum) clear_cache
+      - bin/run_job.sh $ENV_TAG $(cat /tmp/workspace/buildnum) rebuild_index
+
+      - bin/run_job.sh $ENV_TAG $(cat /tmp/workspace/buildnum) rebuild_search_index
+      - bin/cleanup_cronjobs.sh $ENV_TAG "$kept_cronjobs"
+      - bin/run_cronjob.sh $ENV_TAG update_documents "0 5 * * *" $(cat /tmp/workspace/buildnum)
+      - bin/run_cronjob.sh $ENV_TAG crawl_copa_data "0 5 * * *" $(cat /tmp/workspace/buildnum)
+      - bin/run_cronjob.sh $ENV_TAG upload_document_requests @hourly $(cat /tmp/workspace/buildnum)
+      - bin/run_cronjob.sh $ENV_TAG update_attachment_downloads_and_views_count "0 5 * * *" $(cat /tmp/workspace/buildnum)
+      - bin/run_cronjob.sh $ENV_TAG update_titles_to_documentcloud "0 5 * * *" $(cat /tmp/workspace/buildnum)
+      - bin/run_cronjob.sh $ENV_TAG rebuild_index_daily "0 $REBUILD_INDEX_TIME * * *" $(cat /tmp/workspace/buildnum) 
   post_build:
     commands:
-      - echo Build completed on `date`
-      - echo Pushing the Docker images...
-      - docker push $REPOSITORY_URI:latest
-      - docker push $REPOSITORY_URI:$IMAGE_TAG
+      - echo "post-build"
 artifacts:
   files:
         - imagedefinitions.json
