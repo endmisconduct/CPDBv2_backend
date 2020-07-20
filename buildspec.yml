@@ -15,6 +15,7 @@ phases:
     commands:
       - echo Logging in to Amazon ECR...
       - aws --version
+      - echo $BASH_ENV
       - echo 'export PATH="/home/gunicorn/.local/bin/:$PATH"' >> $BASH_ENV
       - pip install --user -r requirements/test.txt
       - flake8
