@@ -78,3 +78,4 @@ pg-credentials.json
 
 # Sitemap file
 /sitemap.xml
+!*.secret
