@@ -24,7 +24,7 @@ phases:
       - pip install --upgrade pip
       - pip install --user -r requirements/test.txt
       - pip install flake8
-      - echo $GPG_PRIVATE_KEY | base64 -d > /tmp/gpg_private.gpg
+      - echo $GPG_PRIVATE_KEY | tr ',' '\n' > /tmp/gpg_private.gpg
       - gpg --allow-secret-key-import --import /tmp/gpg_private.gpg
       - git secret reveal
       - python -m flake8
