@@ -17,6 +17,7 @@ phases:
       - echo Logging in to Amazon ECR...
       - aws --version
       - mkdir -p /tmp/workspace 
+      - export GPG_TTY=$(tty)
       - export BASH_ENV="/tmp/workspace/bash.env"
       - touch $BASH_ENV
       - echo 'export PATH="/home/gunicorn/.local/bin/:$PATH"' >> $BASH_ENV
