@@ -28,13 +28,7 @@ phases:
       - pip install flake8
       - echo $GPG_PRIVATE_KEY | tr ',' '\n' > /tmp/gpg_private.gpg
       - gpg --allow-secret-key-import --import --batch /tmp/gpg_private.gpg
-      - git secret reveal -p $GPG_PASSWORD
-      - python -m flake8
-      - ./cpdb/manage.py makemigrations --dry-run --settings=config.settings.test
-      - mkdir -p /tmp/workspace
-      - echo '$CODEBUILD_BUILD_NUMBER' > /tmp/workspace/buildnum
-      - coverage run cpdb/manage.py test --noinput --nologcapture 
-      - coverage report --omit="/home/ubuntu/virtuanenvs/*"
+      - ls
       - docker info
       - yarn install
       - $(aws ecr get-login --region $AWS_DEFAULT_REGION --no-include-email)
@@ -53,6 +47,13 @@ phases:
   build:
     commands:
       - echo Build started on `date`
+      - git secret reveal -p $GPG_PASSWORD
+      - python -m flake8
+      - ./cpdb/manage.py makemigrations --dry-run --settings=config.settings.test
+      - mkdir -p /tmp/workspace
+      - echo '$CODEBUILD_BUILD_NUMBER' > /tmp/workspace/buildnum
+      - coverage run cpdb/manage.py test --noinput --nologcapture 
+      - coverage report --omit="/home/ubuntu/virtuanenvs/*" 
       - echo Building the Docker image...
       - docker build -t $REPOSITORY_URI:latest .
       - docker tag $REPOSITORY_URI:latest $REPOSITORY_URI:$IMAGE_TAG
