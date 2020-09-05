@@ -46,8 +46,10 @@ phases:
       - git clone https://github.com/endmisconduct/CPDBv2_backend.git
       - cd CPDBv2_backend
       - git secret reveal -p $GPG_PASSWORD
-      - cp $ENV_FILE ..
+      - cp --verbose $ENV_FILE ..
       - cd ..
+      - pwd 
+      - ls
       - . $ENV_FILE
       - export $(cut -d= -f1 $ENV_FILE)
       - bin/ensure_gunicorn_deployment.py -n $NAMESPACE
