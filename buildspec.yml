@@ -53,7 +53,7 @@ phases:
       - ls -l
       - . $PWD/$ENV_FILE
       - export $(cut -d= -f1 $ENV_FILE)
-      - bin/ensure_gunicorn_deployment.py -n $NAMESPACE
+#     - bin/ensure_gunicorn_deployment.py -n $NAMESPACE
       - kept_cronjobs=('update_documents', 'crawl_copa_data', 'upload_document_requests', 'update_attachment_downloads_and_views_count', 'update_titles_to_documentcloud', 'rebuild_index_daily', 'webhook_statuses_check') 
       - python -m flake8
       - ./cpdb/manage.py makemigrations --dry-run --settings=config.settings.test
