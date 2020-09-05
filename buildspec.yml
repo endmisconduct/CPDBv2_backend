@@ -23,6 +23,7 @@ phases:
       - touch $BASH_ENV
       - echo 'export PATH="/home/gunicorn/.local/bin/:$PATH"' >> $BASH_ENV
       - . $BASH_ENV
+      - echo $BASH_ENV
       - pip install --upgrade pip
       - pip install --user -r requirements/test.txt
       - pip install flake8
@@ -49,7 +50,7 @@ phases:
       - cp --verbose $ENV_FILE ..
       - cd ..
       - pwd 
-      - ls
+      - ls -l
       - . $ENV_FILE
       - export $(cut -d= -f1 $ENV_FILE)
       - bin/ensure_gunicorn_deployment.py -n $NAMESPACE
